@@ -1,0 +1,36 @@
+name: Monitor PIB INEGI
+
+on:
+  workflow_dispatch:
+
+  schedule:
+  - cron: '17 14 20-30 * *'
+  
+jobs:
+  monitoreo:
+    runs-on: ubuntu-latest
+
+    env:
+      EMAIL_REMITENTE: ${{ secrets.EMAIL_REMITENTE }}
+      EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+      EMAIL_DESTINATARIOS: ${{ secrets.EMAIL_DESTINATARIOS }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar monitoreo
+        run: python monitoreo_pib.py
+
+      - name: Guardar historial actualizado
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Actualización automática historial PIB
