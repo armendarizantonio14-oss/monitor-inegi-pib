@@ -478,11 +478,12 @@ def enviar_correo(cambios):
             PASSWORD
         )
 
-     servidor.send_message(
-       mensaje,
-       from_addr=EMAIL_ORIGEN,
-       to_addrs=EMAIL_DESTINOS
-     )
+        servidor.send_message(
+            mensaje,
+            from_addr=EMAIL_ORIGEN,
+            to_addrs=EMAIL_DESTINOS
+        )
+
         servidor.quit()
 
         print(
