@@ -465,14 +465,12 @@ def enviar_correo(cambios):
     mensaje["To"] = ", ".join(EMAIL_DESTINOS)
 
     try:
-
         servidor = smtplib.SMTP(
             "smtp.gmail.com",
             587
         )
 
         servidor.starttls()
-
         servidor.login(
             EMAIL_ORIGEN,
             PASSWORD
