@@ -427,54 +427,173 @@ def enviar_correo(cambios):
     if not cambios:
         return
 
-    asunto = (
-        f"ALERTA PIB INEGI - "
-        f"{len(cambios)} cambio(s)"
-    )
+    def convertir_numero(valor):
+        try:
+            if valor in ["", None]:
+                return None
+            return float(valor)
+        except:
+            return None
 
-    cuerpo = []
+    def formato_numero(valor):
+        numero = convertir_numero(valor)
+        if numero is None:
+            return "Sin información"
+        return f"{numero:,.1f}"
 
-    cuerpo.append(
-        "Se detectaron cambios en la información del PIB.\n"
-    )
+    def calcular_diferencia(anterior, nuevo):
+        anterior_num = convertir_numero(anterior)
+        nuevo_num = convertir_numero(nuevo)
 
-    cuerpo.append(
-        f"Fecha: {datetime.now()}\n"
-    )
+        if anterior_num is None or nuevo_num is None:
+            return "Nuevo dato"
 
-    cuerpo.append(
-        "-" * 50 + "\n"
-    )
+        diferencia = nuevo_num - anterior_num
+        return f"{diferencia:+,.1f}"
+
+    def calcular_variacion(anterior, nuevo):
+        anterior_num = convertir_numero(anterior)
+        nuevo_num = convertir_numero(nuevo)
+
+        if anterior_num is None or nuevo_num is None:
+            return "No aplica"
+
+        if anterior_num == 0:
+            return "No aplica"
+
+        diferencia = nuevo_num - anterior_num
+        variacion = (diferencia / anterior_num) * 100
+
+        return f"{variacion:+,.4f} %"
+
+    def resultado_cambio(c):
+        anterior_num = convertir_numero(c["anterior"])
+        nuevo_num = convertir_numero(c["nuevo"])
+
+        if anterior_num is None and nuevo_num is not None:
+            return "Nuevo dato"
+
+        if anterior_num is not None and nuevo_num is not None:
+            if nuevo_num > anterior_num:
+                return "Incremento"
+            elif nuevo_num < anterior_num:
+                return "Disminución"
+
+        return "Sin variación"
+
+    total_cambios = len(cambios)
+    total_nuevos = sum(1 for c in cambios if c["tipo"] == "Nuevo dato publicado")
+    total_correcciones = sum(1 for c in cambios if c["tipo"] == "Corrección")
+
+    incrementos = sum(1 for c in cambios if resultado_cambio(c) == "Incremento")
+    disminuciones = sum(1 for c in cambios if resultado_cambio(c) == "Disminución")
+
+    if total_correcciones > 0 and disminuciones == 0:
+        texto_resumen = (
+            f"Se detectaron <b>{total_cambios} cambios</b> en la información publicada por el INEGI: "
+            f"<b>{total_correcciones}</b> corresponden a correcciones de datos existentes y "
+            f"<b>{total_nuevos}</b> a la publicación de un nuevo dato. "
+            f"Todas las correcciones representan incrementos respecto a la versión anterior."
+        )
+    else:
+        texto_resumen = (
+            f"Se detectaron <b>{total_cambios} cambios</b> en la información publicada por el INEGI: "
+            f"<b>{total_correcciones}</b> correcciones y "
+            f"<b>{total_nuevos}</b> nuevos datos publicados."
+        )
+
+    filas_resumen = ""
 
     for c in cambios:
+        filas_resumen += f"""
+        <tr>
+            <td>{c['anio']}</td>
+            <td>{c['campo']}</td>
+            <td>{c['tipo']}</td>
+            <td>{resultado_cambio(c)}</td>
+        </tr>
+        """
 
-        cuerpo.append(
-            f"Año: {c['anio']}"
-        )
+    filas_detalle = ""
 
-        cuerpo.append(
-            f" | Indicador: {c['campo']}"
-        )
+    for c in cambios:
+        filas_detalle += f"""
+        <tr>
+            <td>{c['anio']}</td>
+            <td>{c['campo']}</td>
+            <td style="text-align:right;">{formato_numero(c['anterior'])}</td>
+            <td style="text-align:right;">{formato_numero(c['nuevo'])}</td>
+            <td style="text-align:right;">{calcular_diferencia(c['anterior'], c['nuevo'])}</td>
+            <td style="text-align:right;">{calcular_variacion(c['anterior'], c['nuevo'])}</td>
+        </tr>
+        """
 
-        cuerpo.append(
-            f" | Tipo: {c['tipo']}\n"
-        )
+    fecha_revision = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-        cuerpo.append(
-            f"Anterior: {c['anterior']}\n"
-        )
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; font-size: 14px; color: #111;">
 
-        cuerpo.append(
-            f"Nuevo: {c['nuevo']}\n"
-        )
+        <p><b>■ ALERTA AUTOMÁTICA PIB INEGI</b></p>
 
-        cuerpo.append(
-            "-" * 50 + "\n"
-        )
+        <p><b>🗓️ Fecha de revisión:</b></p>
+        <p>{fecha_revision}</p>
+
+        <hr>
+
+        <p><b>Resumen ejecutivo</b><br>
+        {texto_resumen}
+        </p>
+
+        <hr>
+
+        <p><b>🔴 Cambios detectados: {total_cambios}</b></p>
+
+        <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">
+            <tr>
+                <th>Año</th>
+                <th>Indicador</th>
+                <th>Tipo</th>
+                <th>Resultado</th>
+            </tr>
+            {filas_resumen}
+        </table>
+
+        <hr>
+
+        <p>Tabla de cambio 📈</p>
+
+        <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">
+            <tr>
+                <th>Año</th>
+                <th>Indicador</th>
+                <th>Anterior</th>
+                <th>Nuevo</th>
+                <th>Diferencia</th>
+                <th>Variación</th>
+            </tr>
+            {filas_detalle}
+        </table>
+
+        <br>
+        <hr>
+
+        <p>
+        Este mensaje fue generado automáticamente por el sistema de<br>
+        monitoreo del PIB del INEGI.
+        </p>
+
+        <p>No es necesario responder este correo.</p>
+
+    </body>
+    </html>
+    """
+
+    asunto = f"ALERTA PIB INEGI - {total_cambios} cambio(s)"
 
     mensaje = MIMEText(
-        "".join(cuerpo),
-        "plain",
+        html,
+        "html",
         "utf-8"
     )
 
