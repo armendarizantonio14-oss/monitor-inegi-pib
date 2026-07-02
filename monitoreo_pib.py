@@ -17,6 +17,24 @@ ARCHIVO_CONTROL = "historial_pib.json"
 ARCHIVO_EXCEL = "monitoreo_pib.xlsx"
 
 # =====================================================
+# CONVERTIR PERIODO
+# =====================================================
+
+def convertir_periodo(periodo):
+
+    equivalencias = {
+        "I": "1T",
+        "II": "2T",
+        "III": "3T",
+        "IV": "4T",
+        "VI": "6 meses",
+        "IX": "9 meses",
+        "XII": "Anual"
+    }
+
+    return equivalencias.get(periodo, periodo)
+
+# =====================================================
 # CORREO
 # =====================================================
 EMAIL_ORIGEN = os.getenv("EMAIL_REMITENTE")
@@ -343,7 +361,7 @@ def comparar(actual, anterior):
 
                     "anio": anio,
 
-                    "campo": campo,
+                    "campo": convertir_periodo(campo),
 
                     "anterior":
                         valor_anterior,
